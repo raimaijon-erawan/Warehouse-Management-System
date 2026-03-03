@@ -1,6 +1,6 @@
 {
-  "name": "ระบบจัดการคลังสินค้า",
-  "short_name": "จัดการคลังสินค้า",
+  "name": "คลังสินค้า",
+  "short_name": "WMS",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#0f172a",
