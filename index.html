@@ -1,0 +1,1873 @@
+<!doctype html>
+<html lang="th" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบจัดการคลังสินค้า WMS</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- SVG Favicon -->
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <!-- fallback สำหรับ browser เก่า -->
+  <link rel="alternate icon" href="icon.svg">
+  <!-- สำหรับ iPhone -->
+  <link rel="apple-touch-icon" href="icon.svg">
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  
+  <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, query, where, orderBy, onSnapshot, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCrAWQl9iWLOopCOUqBG4CNPnpVpPfRpu4",
+            authDomain: "warehouse-management-sys-17ba9.firebaseapp.com",
+            projectId: "warehouse-management-sys-17ba9",
+            storageBucket: "warehouse-management-sys-17ba9.firebasestorage.app",
+            messagingSenderId: "731824635823",
+            appId: "1:731824635823:web:3e85ef61b31a3cbb8db95a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        window.firebaseAuth = auth;
+        window.firebaseDb = db;
+        window.firebaseFunctions = {
+            signInWithEmailAndPassword,
+            signOut,
+            onAuthStateChanged,
+            collection,
+            doc,
+            addDoc,
+            updateDoc,
+            deleteDoc,
+            getDocs,
+            getDoc,
+            query,
+            where,
+            orderBy,
+            onSnapshot,
+            Timestamp,
+            writeBatch
+        };
+    </script>
+  <style>
+        * { font-family: 'Prompt', sans-serif; }
+        .sidebar-link { transition: all 0.2s ease; }
+        .sidebar-link:hover, .sidebar-link.active { background: rgba(59, 130, 246, 0.2); border-left: 3px solid #3b82f6; }
+        .card-stat { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .card-stat:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .modal-overlay { backdrop-filter: blur(4px); }
+        .btn-primary { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+        .btn-primary:hover { background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); }
+        .table-row:hover { background: #f8fafc; }
+        .alert-badge { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .loading-spinner { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full bg-slate-100">
+  <!-- Login Page -->
+  <div id="loginPage" class="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900">
+   <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+    <div class="text-center mb-8">
+     <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+      <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+      </svg>
+     </div>
+     <h1 id="loginTitle" class="text-2xl font-bold text-slate-800">ระบบจัดการคลังสินค้า</h1>
+     <p id="loginCompany" class="text-slate-500 mt-1">Warehouse Management System</p>
+    </div>
+    <form id="loginForm" class="space-y-5">
+     <div>
+      <label class="block text-sm font-medium text-slate-700 mb-2">อีเมล</label> <input type="email" id="loginEmail" required class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="email@example.com">
+     </div>
+     <div>
+      <label class="block text-sm font-medium text-slate-700 mb-2">รหัสผ่าน</label> <input type="password" id="loginPassword" required class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="••••••••">
+     </div>
+     <div id="loginError" class="hidden text-red-500 text-sm bg-red-50 p-3 rounded-lg"></div><button type="submit" id="loginBtn" class="w-full btn-primary text-white py-3 rounded-xl font-medium hover:shadow-lg transition flex items-center justify-center gap-2"> <span>เข้าสู่ระบบ</span>
+      <div id="loginSpinner" class="loading-spinner hidden"></div></button>
+    </form>
+   </div>
+  </div><!-- Main App -->
+  <div id="mainApp" class="h-full hidden">
+   <div class="flex h-full">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col transition-all duration-300 fixed lg:relative h-full z-40">
+     <div class="p-5 border-b border-slate-700">
+      <div class="flex items-center gap-3">
+       <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+        </svg>
+       </div>
+       <div>
+        <h1 id="sidebarTitle" class="font-bold text-lg">WMS</h1>
+        <p id="sidebarCompany" class="text-xs text-slate-400">คลังสินค้า</p>
+       </div>
+      </div>
+     </div>
+     <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+      <a href="#" data-page="dashboard" class="sidebar-link active flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:text-white">
+       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+       </svg><span>แดชบอร์ด</span> </a> <a href="#" data-page="products" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:text-white">
+       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+       </svg><span>จัดการสินค้า</span> </a> <a href="#" data-page="categories" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:text-white">
+       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+       </svg><span>หมวดหมู่</span> </a> <a href="#" data-page="suppliers" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:text-white">
+       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+       </svg><span>ซัพพลายเออร์</span> </a>
+      <div class="pt-4 mt-4 border-t border-slate-700">
+       <p class="px-4 text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">การเคลื่อนไหว</p>
+      </div><a href="#" data-page="inbound" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:text-white">
+       <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8l-8 8-8-8"></path>
+       </svg><span>รับสินค้าเข้า</span> </a> <a href="#" data-page="outbound" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:text-white">
+       <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 20V4m-8 8l8-8 8 8"></path>
+       </svg><span>จ่ายสินค้าออก</span> </a>
+      <div class="pt-4 mt-4 border-t border-slate-700">
+       <p class="px-4 text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">รายงาน</p>
+      </div><a href="#" data-page="reports" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:text-white">
+       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+       </svg><span>รายงาน</span> </a>
+     </nav>
+     <div class="p-4 border-t border-slate-700">
+      <div class="flex items-center gap-3 px-2 py-2">
+       <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+        <span id="userInitial" class="text-white font-medium">U</span>
+       </div>
+       <div class="flex-1 min-w-0">
+        <p id="userEmail" class="text-sm font-medium text-white truncate">user@email.com</p>
+        <p class="text-xs text-slate-400">เจ้าของกิจการ</p>
+       </div><button onclick="handleLogout()" class="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition" title="ออกจากระบบ">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+        </svg></button>
+      </div>
+     </div>
+    </aside><!-- Mobile Overlay -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden lg:hidden" onclick="toggleSidebar()"></div><!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden">
+     <!-- Top Bar -->
+     <header class="bg-white shadow-sm px-4 lg:px-6 py-4 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-4">
+       <button onclick="toggleSidebar()" class="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg></button>
+       <h2 id="pageTitle" class="text-xl font-semibold text-slate-800">แดชบอร์ด</h2>
+      </div>
+      <div class="flex items-center gap-3">
+       <div id="alertBell" class="relative cursor-pointer" onclick="showAlerts()">
+        <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+        </svg><span id="alertCount" class="hidden absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center alert-badge">0</span>
+       </div>
+       <div class="text-right hidden sm:block">
+        <p class="text-sm text-slate-600" id="currentDate"></p>
+        <p class="text-xs text-slate-400" id="currentTime"></p>
+       </div>
+      </div>
+     </header><!-- Page Content -->
+     <div class="flex-1 overflow-y-auto p-4 lg:p-6">
+      <!-- Dashboard Page -->
+      <div id="dashboardPage" class="page">
+       <!-- Stats Cards -->
+       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div class="card-stat bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+         <div class="flex items-center justify-between">
+          <div>
+           <p class="text-slate-500 text-sm">สินค้าทั้งหมด</p>
+           <p id="totalProducts" class="text-2xl font-bold text-slate-800 mt-1">0</p>
+          </div>
+          <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+           <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+           </svg>
+          </div>
+         </div>
+        </div>
+        <div class="card-stat bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+         <div class="flex items-center justify-between">
+          <div>
+           <p class="text-slate-500 text-sm">รับเข้าวันนี้</p>
+           <p id="todayInbound" class="text-2xl font-bold text-green-600 mt-1">0</p>
+          </div>
+          <div class="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+           <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8l-8 8-8-8"></path>
+           </svg>
+          </div>
+         </div>
+        </div>
+        <div class="card-stat bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+         <div class="flex items-center justify-between">
+          <div>
+           <p class="text-slate-500 text-sm">จ่ายออกวันนี้</p>
+           <p id="todayOutbound" class="text-2xl font-bold text-orange-600 mt-1">0</p>
+          </div>
+          <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+           <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 20V4m-8 8l8-8 8 8"></path>
+           </svg>
+          </div>
+         </div>
+        </div>
+       </div><!-- Charts & Alerts -->
+       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"><!-- Low Stock Alert Card -->
+        <div class="card-stat bg-white rounded-xl p-5 shadow-sm border border-amber-200">
+         <div class="flex items-center justify-between">
+          <div>
+           <p class="text-slate-500 text-sm">สินค้าใกล้หมด</p>
+           <p class="low-stock-value text-2xl font-bold text-amber-600 mt-1">0</p>
+          </div>
+          <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+           <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+           </svg>
+          </div>
+         </div>
+        </div><!-- Out of Stock Alert Card -->
+        <div class="card-stat bg-white rounded-xl p-5 shadow-sm border border-red-200">
+         <div class="flex items-center justify-between">
+          <div>
+           <p class="text-slate-500 text-sm">สินค้าหมดสต็อก</p>
+           <p class="out-stock-value text-2xl font-bold text-red-600 mt-1">0</p>
+          </div>
+          <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+           <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+           </svg>
+          </div>
+         </div>
+        </div>
+       </div><!-- Charts & Low Stock List -->
+       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Movement Chart -->
+        <div class="lg:col-span-2 bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+         <h3 class="font-semibold text-slate-800 mb-4">การเคลื่อนไหวสินค้า (7 วันล่าสุด)</h3>
+         <div class="h-64">
+          <canvas id="movementChart"></canvas>
+         </div>
+        </div><!-- Low Stock Alert -->
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+         <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-slate-800">⚠️ แจ้งเตือนสต็อก</h3><span id="lowStockCount" class="bg-red-100 text-red-600 text-xs font-medium px-2 py-1 rounded-full">0</span>
+         </div>
+         <div id="lowStockList" class="space-y-3 max-h-56 overflow-y-auto">
+          <p class="text-slate-400 text-sm text-center py-4">ไม่มีสินค้าใกล้หมด</p>
+         </div>
+        </div>
+       </div>
+      </div><!-- Products Page -->
+      <div id="productsPage" class="page hidden">
+       <div class="bg-white rounded-xl shadow-sm border border-slate-200">
+        <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+         <div class="relative flex-1 max-w-md">
+          <input type="text" id="productSearch" placeholder="ค้นหาสินค้า..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          <svg class="w-5 h-5 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+         </div><button onclick="openProductModal()" class="btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 whitespace-nowrap">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg> เพิ่มสินค้า </button>
+        </div>
+        <div class="overflow-x-auto">
+         <table class="w-full">
+          <thead class="bg-slate-50">
+           <tr>
+            <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ชื่อสินค้า</th>
+            <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">หมวดหมู่</th>
+            <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">หน่วย</th>
+            <th class="px-5 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">ราคาทุน</th>
+            <th class="px-5 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">ราคาขาย</th>
+            <th class="px-5 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">คงเหลือ</th>
+            <th class="px-5 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">สถานะ</th>
+            <th class="px-5 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">จัดการ</th>
+           </tr>
+          </thead>
+          <tbody id="productsTableBody" class="divide-y divide-slate-200">
+           <tr>
+            <td colspan="8" class="px-5 py-10 text-center text-slate-400">กำลังโหลด...</td>
+           </tr>
+          </tbody>
+         </table>
+        </div>
+       </div>
+      </div><!-- Categories Page -->
+      <div id="categoriesPage" class="page hidden">
+       <div class="bg-white rounded-xl shadow-sm border border-slate-200">
+        <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+         <h3 class="font-semibold text-slate-800">หมวดหมู่สินค้า</h3><button onclick="openCategoryModal()" class="btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg> เพิ่มหมวดหมู่ </button>
+        </div>
+        <div class="p-5">
+         <div id="categoriesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <p class="text-slate-400 text-center py-4 col-span-full">กำลังโหลด...</p>
+         </div>
+        </div>
+       </div>
+      </div><!-- Suppliers Page -->
+      <div id="suppliersPage" class="page hidden">
+       <div class="bg-white rounded-xl shadow-sm border border-slate-200">
+        <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+         <h3 class="font-semibold text-slate-800">ซัพพลายเออร์</h3><button onclick="openSupplierModal()" class="btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg> เพิ่มซัพพลายเออร์ </button>
+        </div>
+        <div class="overflow-x-auto">
+         <table class="w-full">
+          <thead class="bg-slate-50">
+           <tr>
+            <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ชื่อซัพพลายเออร์</th>
+            <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ติดต่อ</th>
+            <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">อีเมล</th>
+            <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ที่อยู่</th>
+            <th class="px-5 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">จัดการ</th>
+           </tr>
+          </thead>
+          <tbody id="suppliersTableBody" class="divide-y divide-slate-200">
+           <tr>
+            <td colspan="5" class="px-5 py-10 text-center text-slate-400">กำลังโหลด...</td>
+           </tr>
+          </tbody>
+         </table>
+        </div>
+       </div>
+      </div><!-- Inbound Page -->
+      <div id="inboundPage" class="page hidden">
+       <div class="bg-white rounded-xl shadow-sm border border-slate-200">
+        <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+         <h3 class="font-semibold text-slate-800">📥 รับสินค้าเข้า</h3><button onclick="openInboundModal()" class="btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg> สร้างเอกสารรับเข้า </button>
+        </div>
+        <div class="overflow-x-auto">
+         <table class="w-full">
+          <thead class="bg-slate-50">
+           <tr>
+            <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">เลขที่เอกสาร</th>
+            <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">วันที่</th>
+            <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">สินค้า</th>
+            <th class="px-5 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">จำนวน</th>
+            <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ซัพพลายเออร์</th>
+            <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">หมายเหตุ</th>
+           </tr>
+          </thead>
+          <tbody id="inboundTableBody" class="divide-y divide-slate-200">
+           <tr>
+            <td colspan="6" class="px-5 py-10 text-center text-slate-400">กำลังโหลด...</td>
+           </tr>
+          </tbody>
+         </table>
+        </div>
+       </div>
+      </div><!-- Outbound Page -->
+      <div id="outboundPage" class="page hidden">
+       <div class="bg-white rounded-xl shadow-sm border border-slate-200">
+        <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+         <h3 class="font-semibold text-slate-800">📤 จ่ายสินค้าออก</h3><button onclick="openOutboundModal()" class="btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg> สร้างเอกสารจ่ายออก </button>
+        </div>
+        <div class="overflow-x-auto">
+         <table class="w-full">
+          <thead class="bg-slate-50">
+           <tr>
+            <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">เลขที่เอกสาร</th>
+            <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">วันที่</th>
+            <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">สินค้า</th>
+            <th class="px-5 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">จำนวน</th>
+            <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">หมายเหตุ</th>
+           </tr>
+          </thead>
+          <tbody id="outboundTableBody" class="divide-y divide-slate-200">
+           <tr>
+            <td colspan="5" class="px-5 py-10 text-center text-slate-400">กำลังโหลด...</td>
+           </tr>
+          </tbody>
+         </table>
+        </div>
+       </div>
+      </div><!-- Reports Page -->
+      <div id="reportsPage" class="page hidden">
+       <div class="space-y-6">
+        <!-- Report Filters -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+         <h3 class="font-semibold text-slate-800 mb-4">📊 สร้างรายงาน</h3>
+         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+           <label class="block text-sm font-medium text-slate-700 mb-1">ประเภทรายงาน</label> <select id="reportType" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"> <option value="movements">รับเข้า-จ่ายออก</option> <option value="stock">สินค้าคงเหลือ</option> </select>
+          </div>
+          <div>
+           <label class="block text-sm font-medium text-slate-700 mb-1">วันที่เริ่มต้น</label> <input type="date" id="reportStartDate" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+           <label class="block text-sm font-medium text-slate-700 mb-1">วันที่สิ้นสุด</label> <input type="date" id="reportEndDate" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div class="flex items-end gap-2">
+           <button onclick="generateReport()" class="btn-primary text-white px-4 py-2 rounded-lg font-medium flex-1">สร้างรายงาน</button> <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-1">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg> Excel </button>
+          </div>
+         </div>
+        </div><!-- Report Results -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200">
+         <div class="p-5 border-b border-slate-200">
+          <h3 id="reportTitle" class="font-semibold text-slate-800">ผลลัพธ์รายงาน</h3>
+         </div>
+         <div class="overflow-x-auto">
+          <table class="w-full">
+           <thead id="reportTableHead" class="bg-slate-50">
+           </thead>
+           <tbody id="reportTableBody" class="divide-y divide-slate-200">
+            <tr>
+             <td colspan="6" class="px-5 py-10 text-center text-slate-400">เลือกประเภทรายงานและกดสร้างรายงาน</td>
+            </tr>
+           </tbody>
+          </table>
+         </div>
+        </div>
+       </div>
+      </div>
+     </div>
+    </main>
+   </div>
+  </div><!-- Product Modal -->
+  <div id="productModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden modal-overlay flex items-center justify-center p-4">
+   <div class="bg-white rounded-2xl w-full max-w-lg max-h-[90%] overflow-y-auto">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
+     <h3 id="productModalTitle" class="font-semibold text-lg text-slate-800">เพิ่มสินค้า</h3><button onclick="closeProductModal()" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg></button>
+    </div>
+    <form id="productForm" class="p-5 space-y-4">
+     <input type="hidden" id="productId">
+     <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อสินค้า *</label> <input type="text" id="productName" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+     </div>
+     <div class="grid grid-cols-2 gap-4">
+      <div>
+       <label class="block text-sm font-medium text-slate-700 mb-1">หมวดหมู่</label> <select id="productCategory" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"> <option value="">-- เลือกหมวดหมู่ --</option> </select>
+      </div>
+      <div>
+       <label class="block text-sm font-medium text-slate-700 mb-1">หน่วยนับ</label> <input type="text" id="productUnit" placeholder="ชิ้น, กล่อง, กก." class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+      </div>
+     </div>
+     <div class="grid grid-cols-2 gap-4">
+      <div>
+       <label class="block text-sm font-medium text-slate-700 mb-1">ราคาทุน (บาท)</label> <input type="number" id="productCost" min="0" step="0.01" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div>
+       <label class="block text-sm font-medium text-slate-700 mb-1">ราคาขาย (บาท)</label> <input type="number" id="productPrice" min="0" step="0.01" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+      </div>
+     </div>
+     <div class="grid grid-cols-2 gap-4">
+      <div>
+       <label class="block text-sm font-medium text-slate-700 mb-1">จำนวนคงเหลือ</label> <input type="number" id="productStock" min="0" value="0" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div>
+       <label class="block text-sm font-medium text-slate-700 mb-1">Minimum Stock</label> <input type="number" id="productMinStock" min="0" value="10" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+      </div>
+     </div>
+     <div class="pt-4 flex gap-3">
+      <button type="button" onclick="closeProductModal()" class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">ยกเลิก</button> <button type="submit" class="flex-1 btn-primary text-white px-4 py-2 rounded-lg font-medium">บันทึก</button>
+     </div>
+    </form>
+   </div>
+  </div><!-- Category Modal -->
+  <div id="categoryModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden modal-overlay flex items-center justify-center p-4">
+   <div class="bg-white rounded-2xl w-full max-w-md">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+     <h3 id="categoryModalTitle" class="font-semibold text-lg text-slate-800">เพิ่มหมวดหมู่</h3><button onclick="closeCategoryModal()" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg></button>
+    </div>
+    <form id="categoryForm" class="p-5 space-y-4">
+     <input type="hidden" id="categoryId">
+     <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อหมวดหมู่ *</label> <input type="text" id="categoryName" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+     </div>
+     <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">คำอธิบาย</label> <textarea id="categoryDesc" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+     </div>
+     <div class="pt-4 flex gap-3">
+      <button type="button" onclick="closeCategoryModal()" class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">ยกเลิก</button> <button type="submit" class="flex-1 btn-primary text-white px-4 py-2 rounded-lg font-medium">บันทึก</button>
+     </div>
+    </form>
+   </div>
+  </div><!-- Supplier Modal -->
+  <div id="supplierModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden modal-overlay flex items-center justify-center p-4">
+   <div class="bg-white rounded-2xl w-full max-w-lg">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+     <h3 id="supplierModalTitle" class="font-semibold text-lg text-slate-800">เพิ่มซัพพลายเออร์</h3><button onclick="closeSupplierModal()" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg></button>
+    </div>
+    <form id="supplierForm" class="p-5 space-y-4">
+     <input type="hidden" id="supplierId">
+     <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อซัพพลายเออร์ *</label> <input type="text" id="supplierName" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+     </div>
+     <div class="grid grid-cols-2 gap-4">
+      <div>
+       <label class="block text-sm font-medium text-slate-700 mb-1">เบอร์ติดต่อ</label> <input type="text" id="supplierPhone" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div>
+       <label class="block text-sm font-medium text-slate-700 mb-1">อีเมล</label> <input type="email" id="supplierEmail" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+      </div>
+     </div>
+     <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">ที่อยู่</label> <textarea id="supplierAddress" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+     </div>
+     <div class="pt-4 flex gap-3">
+      <button type="button" onclick="closeSupplierModal()" class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">ยกเลิก</button> <button type="submit" class="flex-1 btn-primary text-white px-4 py-2 rounded-lg font-medium">บันทึก</button>
+     </div>
+    </form>
+   </div>
+  </div><!-- Inbound Modal -->
+  <div id="inboundModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden modal-overlay flex items-center justify-center p-4">
+   <div class="bg-white rounded-2xl w-full max-w-lg">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+     <h3 class="font-semibold text-lg text-slate-800">📥 รับสินค้าเข้า</h3><button onclick="closeInboundModal()" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg></button>
+    </div>
+    <form id="inboundForm" class="p-5 space-y-4">
+     <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">สินค้า *</label> <select id="inboundProduct" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"> <option value="">-- เลือกสินค้า --</option> </select>
+     </div>
+     <div class="grid grid-cols-2 gap-4">
+      <div>
+       <label class="block text-sm font-medium text-slate-700 mb-1">จำนวนรับเข้า *</label> <input type="number" id="inboundQty" required min="1" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div>
+       <label class="block text-sm font-medium text-slate-700 mb-1">วันที่ *</label> <input type="date" id="inboundDate" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+      </div>
+     </div>
+     <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">ซัพพลายเออร์</label> <select id="inboundSupplier" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"> <option value="">-- เลือกซัพพลายเออร์ --</option> </select>
+     </div>
+     <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">หมายเหตุ</label> <textarea id="inboundNote" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+     </div>
+     <div class="pt-4 flex gap-3">
+      <button type="button" onclick="closeInboundModal()" class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">ยกเลิก</button> <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium">บันทึกรับเข้า</button>
+     </div>
+    </form>
+   </div>
+  </div><!-- Outbound Modal -->
+  <div id="outboundModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden modal-overlay flex items-center justify-center p-4">
+   <div class="bg-white rounded-2xl w-full max-w-lg">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+     <h3 class="font-semibold text-lg text-slate-800">📤 จ่ายสินค้าออก</h3><button onclick="closeOutboundModal()" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg></button>
+    </div>
+    <form id="outboundForm" class="p-5 space-y-4">
+     <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">สินค้า *</label> <select id="outboundProduct" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"> <option value="">-- เลือกสินค้า --</option> </select>
+      <p id="outboundStockInfo" class="text-sm text-slate-500 mt-1"></p>
+     </div>
+     <div class="grid grid-cols-2 gap-4">
+      <div>
+       <label class="block text-sm font-medium text-slate-700 mb-1">จำนวนจ่าย *</label> <input type="number" id="outboundQty" required min="1" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div>
+       <label class="block text-sm font-medium text-slate-700 mb-1">วันที่ *</label> <input type="date" id="outboundDate" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+      </div>
+     </div>
+     <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">หมายเหตุ</label> <textarea id="outboundNote" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+     </div>
+     <div id="outboundError" class="hidden text-red-500 text-sm bg-red-50 p-3 rounded-lg"></div>
+     <div class="pt-4 flex gap-3">
+      <button type="button" onclick="closeOutboundModal()" class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">ยกเลิก</button> <button type="submit" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium">บันทึกจ่ายออก</button>
+     </div>
+    </form>
+   </div>
+  </div><!-- Alert Modal -->
+  <div id="alertModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden modal-overlay flex items-center justify-center p-4">
+   <div class="bg-white rounded-2xl w-full max-w-md max-h-[80%] overflow-hidden">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+     <h3 class="font-semibold text-lg text-slate-800">🔔 การแจ้งเตือน</h3><button onclick="closeAlertModal()" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg></button>
+    </div>
+    <div id="alertModalContent" class="p-5 max-h-96 overflow-y-auto">
+    </div>
+   </div>
+  </div><!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden modal-overlay flex items-center justify-center p-4">
+   <div class="bg-white rounded-2xl w-full max-w-sm p-6 text-center">
+    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+     <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+     </svg>
+    </div>
+    <h3 class="text-lg font-semibold text-slate-800 mb-2">ยืนยันการลบ</h3>
+    <p id="deleteMessage" class="text-slate-500 mb-6">คุณต้องการลบรายการนี้หรือไม่?</p>
+    <div class="flex gap-3">
+     <button onclick="closeDeleteModal()" class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">ยกเลิก</button> <button id="confirmDeleteBtn" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium">ลบ</button>
+    </div>
+   </div>
+  </div><!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-4 right-4 z-50 hidden">
+   <div class="bg-slate-800 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-3">
+    <span id="toastIcon">✓</span> <span id="toastMessage">สำเร็จ</span>
+   </div>
+  </div>
+  <script>
+        // Global State
+        let products = [];
+        let categories = [];
+        let suppliers = [];
+        let inboundTransactions = [];
+        let outboundTransactions = [];
+        let currentUser = null;
+        let movementChart = null;
+        let reportData = [];
+
+        const defaultConfig = {
+            app_title: 'ระบบจัดการคลังสินค้า',
+            company_name: 'Warehouse Management System'
+        };
+
+        // Element SDK Initialization
+        if (window.elementSdk) {
+            window.elementSdk.init({
+                defaultConfig,
+                onConfigChange: async (config) => {
+                    const title = config.app_title || defaultConfig.app_title;
+                    const company = config.company_name || defaultConfig.company_name;
+                    document.getElementById('loginTitle').textContent = title;
+                    document.getElementById('loginCompany').textContent = company;
+                    document.getElementById('sidebarTitle').textContent = title.substring(0, 20);
+                    document.getElementById('sidebarCompany').textContent = company.substring(0, 20);
+                },
+                mapToCapabilities: (config) => ({
+                    recolorables: [],
+                    borderables: [],
+                    fontEditable: undefined,
+                    fontSizeable: undefined
+                }),
+                mapToEditPanelValues: (config) => new Map([
+                    ['app_title', config.app_title || defaultConfig.app_title],
+                    ['company_name', config.company_name || defaultConfig.company_name]
+                ])
+            });
+        }
+
+        // Wait for Firebase
+        function waitForFirebase() {
+            return new Promise((resolve) => {
+                const check = () => {
+                    if (window.firebaseAuth && window.firebaseDb && window.firebaseFunctions) {
+                        resolve();
+                    } else {
+                        setTimeout(check, 100);
+                    }
+                };
+                check();
+            });
+        }
+
+        // Initialize App
+        async function initApp() {
+            await waitForFirebase();
+            
+            const { onAuthStateChanged } = window.firebaseFunctions;
+            
+            onAuthStateChanged(window.firebaseAuth, (user) => {
+                if (user) {
+                    currentUser = user;
+                    showMainApp();
+                    loadAllData();
+                } else {
+                    currentUser = null;
+                    showLoginPage();
+                }
+            });
+
+            setupEventListeners();
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            setDefaultDates();
+        }
+
+        // Auth Functions
+        function showLoginPage() {
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+        }
+
+        function showMainApp() {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            document.getElementById('userEmail').textContent = currentUser.email;
+            document.getElementById('userInitial').textContent = currentUser.email.charAt(0).toUpperCase();
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            const spinner = document.getElementById('loginSpinner');
+            const btn = document.getElementById('loginBtn');
+
+            errorDiv.classList.add('hidden');
+            spinner.classList.remove('hidden');
+            btn.disabled = true;
+
+            try {
+                const { signInWithEmailAndPassword } = window.firebaseFunctions;
+                await signInWithEmailAndPassword(window.firebaseAuth, email, password);
+            } catch (error) {
+                errorDiv.textContent = getFirebaseError(error.code);
+                errorDiv.classList.remove('hidden');
+            } finally {
+                spinner.classList.add('hidden');
+                btn.disabled = false;
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                const { signOut } = window.firebaseFunctions;
+                await signOut(window.firebaseAuth);
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาดในการออกจากระบบ', 'error');
+            }
+        }
+
+        function getFirebaseError(code) {
+            const errors = {
+                'auth/user-not-found': 'ไม่พบผู้ใช้งานนี้ในระบบ',
+                'auth/wrong-password': 'รหัสผ่านไม่ถูกต้อง',
+                'auth/invalid-email': 'รูปแบบอีเมลไม่ถูกต้อง',
+                'auth/too-many-requests': 'เข้าสู่ระบบผิดพลาดหลายครั้ง กรุณารอสักครู่',
+                'auth/invalid-credential': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'
+            };
+            return errors[code] || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+        }
+
+        // Load Data Functions
+        async function loadAllData() {
+            await Promise.all([
+                loadCategories(),
+                loadSuppliers(),
+                loadProducts(),
+                loadInboundTransactions(),
+                loadOutboundTransactions()
+            ]);
+            updateDashboard();
+        }
+
+        async function loadProducts() {
+            try {
+                const { collection, getDocs, onSnapshot } = window.firebaseFunctions;
+                onSnapshot(collection(window.firebaseDb, 'products'), (snapshot) => {
+                    products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    renderProducts();
+                    updateDashboard();
+                    populateProductSelects();
+                });
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        }
+
+        async function loadCategories() {
+            try {
+                const { collection, onSnapshot } = window.firebaseFunctions;
+                onSnapshot(collection(window.firebaseDb, 'categories'), (snapshot) => {
+                    categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    renderCategories();
+                    populateCategorySelect();
+                });
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        async function loadSuppliers() {
+            try {
+                const { collection, onSnapshot } = window.firebaseFunctions;
+                onSnapshot(collection(window.firebaseDb, 'suppliers'), (snapshot) => {
+                    suppliers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    renderSuppliers();
+                    populateSupplierSelect();
+                });
+            } catch (error) {
+                console.error('Error loading suppliers:', error);
+            }
+        }
+
+        async function loadInboundTransactions() {
+            try {
+                const { collection, onSnapshot, orderBy, query } = window.firebaseFunctions;
+                const q = query(collection(window.firebaseDb, 'inbound_transactions'), orderBy('date', 'desc'));
+                onSnapshot(q, (snapshot) => {
+                    inboundTransactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    renderInbound();
+                    updateDashboard();
+                });
+            } catch (error) {
+                console.error('Error loading inbound:', error);
+            }
+        }
+
+        async function loadOutboundTransactions() {
+            try {
+                const { collection, onSnapshot, orderBy, query } = window.firebaseFunctions;
+                const q = query(collection(window.firebaseDb, 'outbound_transactions'), orderBy('date', 'desc'));
+                onSnapshot(q, (snapshot) => {
+                    outboundTransactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    renderOutbound();
+                    updateDashboard();
+                });
+            } catch (error) {
+                console.error('Error loading outbound:', error);
+            }
+        }
+
+        // Render Functions
+        function renderProducts() {
+            const tbody = document.getElementById('productsTableBody');
+            const searchTerm = document.getElementById('productSearch')?.value?.toLowerCase() || '';
+            
+            const filtered = products.filter(p => 
+                p.name?.toLowerCase().includes(searchTerm) ||
+                getCategoryName(p.categoryId)?.toLowerCase().includes(searchTerm)
+            );
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="px-5 py-10 text-center text-slate-400">ไม่พบข้อมูลสินค้า</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(p => {
+                const status = getStockStatus(p.stock, p.minStock);
+                return `
+                    <tr class="table-row">
+                        <td class="px-5 py-4 font-medium text-slate-800">${escapeHtml(p.name)}</td>
+                        <td class="px-5 py-4 text-slate-600">${getCategoryName(p.categoryId)}</td>
+                        <td class="px-5 py-4 text-slate-600">${escapeHtml(p.unit)}</td>
+                        <td class="px-5 py-4 text-right text-slate-600">฿${formatNumber(p.cost)}</td>
+                        <td class="px-5 py-4 text-right text-slate-600">฿${formatNumber(p.price)}</td>
+                        <td class="px-5 py-4 text-right font-medium ${status.color}">${formatNumber(p.stock)}</td>
+                        <td class="px-5 py-4 text-center">
+                            <span class="px-2 py-1 text-xs font-medium rounded-full ${status.badge}">${status.text}</span>
+                        </td>
+                        <td class="px-5 py-4 text-center">
+                            <div class="flex items-center justify-center gap-1">
+                                <button onclick="editProduct('${p.id}')" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="แก้ไข">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                </button>
+                                <button onclick="confirmDeleteProduct('${p.id}', '${escapeHtml(p.name)}')" class="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="ลบ">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderCategories() {
+            const grid = document.getElementById('categoriesGrid');
+            
+            if (categories.length === 0) {
+                grid.innerHTML = '<p class="text-slate-400 text-center py-4 col-span-full">ยังไม่มีหมวดหมู่</p>';
+                return;
+            }
+
+            grid.innerHTML = categories.map(c => {
+                const productCount = products.filter(p => p.categoryId === c.id).length;
+                return `
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 hover:shadow-md transition">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h4 class="font-medium text-slate-800">${escapeHtml(c.name)}</h4>
+                                <p class="text-sm text-slate-500 mt-1">${escapeHtml(c.description || 'ไม่มีคำอธิบาย')}</p>
+                                <p class="text-xs text-slate-400 mt-2">${productCount} สินค้า</p>
+                            </div>
+                            <div class="flex gap-1">
+                                <button onclick="editCategory('${c.id}')" class="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                </button>
+                                <button onclick="confirmDeleteCategory('${c.id}', '${escapeHtml(c.name)}')" class="p-1.5 text-red-600 hover:bg-red-100 rounded-lg">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderSuppliers() {
+            const tbody = document.getElementById('suppliersTableBody');
+            
+            if (suppliers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-5 py-10 text-center text-slate-400">ยังไม่มีซัพพลายเออร์</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = suppliers.map(s => `
+                <tr class="table-row">
+                    <td class="px-5 py-4 font-medium text-slate-800">${escapeHtml(s.name)}</td>
+                    <td class="px-5 py-4 text-slate-600">${escapeHtml(s.phone || '-')}</td>
+                    <td class="px-5 py-4 text-slate-600">${escapeHtml(s.email || '-')}</td>
+                    <td class="px-5 py-4 text-slate-600 max-w-xs truncate">${escapeHtml(s.address || '-')}</td>
+                    <td class="px-5 py-4 text-center">
+                        <div class="flex items-center justify-center gap-1">
+                            <button onclick="editSupplier('${s.id}')" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            </button>
+                            <button onclick="confirmDeleteSupplier('${s.id}', '${escapeHtml(s.name)}')" class="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderInbound() {
+            const tbody = document.getElementById('inboundTableBody');
+            
+            if (inboundTransactions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-10 text-center text-slate-400">ยังไม่มีรายการรับเข้า</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = inboundTransactions.map(t => `
+                <tr class="table-row">
+                    <td class="px-5 py-4 font-mono text-sm text-slate-600">${escapeHtml(t.docNumber)}</td>
+                    <td class="px-5 py-4 text-slate-600">${formatDate(t.date)}</td>
+                    <td class="px-5 py-4 font-medium text-slate-800">${escapeHtml(t.productName)}</td>
+                    <td class="px-5 py-4 text-right text-green-600 font-medium">+${formatNumber(t.quantity)}</td>
+                    <td class="px-5 py-4 text-slate-600">${escapeHtml(t.supplierName || '-')}</td>
+                    <td class="px-5 py-4 text-slate-500 text-sm max-w-xs truncate">${escapeHtml(t.note || '-')}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderOutbound() {
+            const tbody = document.getElementById('outboundTableBody');
+            
+            if (outboundTransactions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-5 py-10 text-center text-slate-400">ยังไม่มีรายการจ่ายออก</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = outboundTransactions.map(t => `
+                <tr class="table-row">
+                    <td class="px-5 py-4 font-mono text-sm text-slate-600">${escapeHtml(t.docNumber)}</td>
+                    <td class="px-5 py-4 text-slate-600">${formatDate(t.date)}</td>
+                    <td class="px-5 py-4 font-medium text-slate-800">${escapeHtml(t.productName)}</td>
+                    <td class="px-5 py-4 text-right text-orange-600 font-medium">-${formatNumber(t.quantity)}</td>
+                    <td class="px-5 py-4 text-slate-500 text-sm max-w-xs truncate">${escapeHtml(t.note || '-')}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Dashboard Functions
+        function updateDashboard() {
+            // Total Products
+            document.getElementById('totalProducts').textContent = formatNumber(products.length);
+
+            // Today's Inbound
+            const today = new Date().toISOString().split('T')[0];
+            const todayIn = inboundTransactions.filter(t => t.date === today);
+            document.getElementById('todayInbound').textContent = formatNumber(todayIn.length);
+
+            // Today's Outbound
+            const todayOut = outboundTransactions.filter(t => t.date === today);
+            document.getElementById('todayOutbound').textContent = formatNumber(todayOut.length);
+
+            // Low Stock Alert
+            updateLowStockAlert();
+
+            // Chart
+            updateMovementChart();
+        }
+
+        function updateLowStockAlert() {
+            const lowStock = products.filter(p => (p.stock || 0) > 0 && (p.stock || 0) <= (p.minStock || 10));
+            const outOfStock = products.filter(p => (p.stock || 0) === 0);
+            const listEl = document.getElementById('lowStockList');
+            const alertCountEl = document.getElementById('alertCount');
+            
+            // Update card displays directly by ID
+            const lowStockEl = document.querySelector('.low-stock-value');
+            const outStockEl = document.querySelector('.out-stock-value');
+            
+            if (lowStockEl) lowStockEl.textContent = formatNumber(lowStock.length);
+            if (outStockEl) outStockEl.textContent = formatNumber(outOfStock.length);
+
+            listEl.innerHTML = '';
+            
+            if (lowStock.length > 0 || outOfStock.length > 0) {
+                alertCountEl.textContent = lowStock.length + outOfStock.length;
+                alertCountEl.classList.remove('hidden');
+                alertCountEl.classList.add('flex');
+            } else {
+                alertCountEl.classList.add('hidden');
+                alertCountEl.classList.remove('flex');
+            }
+
+            // Sidebar Alert List (Low + Out combined)
+            const allAlerts = [...lowStock, ...outOfStock];
+            if (allAlerts.length === 0) {
+                listEl.innerHTML = '<p class="text-slate-400 text-sm text-center py-4">✓ ไม่มีการแจ้งเตือน</p>';
+                return;
+            }
+
+            listEl.innerHTML = allAlerts.map(p => {
+                const isOut = (p.stock || 0) === 0;
+                return `
+                    <div class="flex items-center justify-between p-3 rounded-lg ${isOut ? 'bg-red-50 border border-red-200' : 'bg-amber-50 border border-amber-200'}">
+                        <div>
+                            <p class="font-medium text-slate-800 text-sm">${escapeHtml(p.name)}</p>
+                            <p class="text-xs ${isOut ? 'text-red-600' : 'text-amber-600'}">${isOut ? 'หมดสต็อก!' : 'คงเหลือ ' + p.stock + ' ' + p.unit}</p>
+                        </div>
+                        <span class="text-lg">${isOut ? '🔴' : '🟡'}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateMovementChart() {
+            const ctx = document.getElementById('movementChart').getContext('2d');
+            
+            // Get last 7 days
+            const labels = [];
+            const inboundData = [];
+            const outboundData = [];
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                labels.push(date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }));
+                
+                const dayIn = inboundTransactions.filter(t => t.date === dateStr).reduce((sum, t) => sum + (t.quantity || 0), 0);
+                const dayOut = outboundTransactions.filter(t => t.date === dateStr).reduce((sum, t) => sum + (t.quantity || 0), 0);
+                
+                inboundData.push(dayIn);
+                outboundData.push(dayOut);
+            }
+
+            if (movementChart) {
+                movementChart.destroy();
+            }
+
+            movementChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'รับเข้า',
+                            data: inboundData,
+                            backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'จ่ายออก',
+                            data: outboundData,
+                            backgroundColor: 'rgba(249, 115, 22, 0.7)',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Product CRUD
+        function openProductModal(product = null) {
+            const modal = document.getElementById('productModal');
+            const form = document.getElementById('productForm');
+            const title = document.getElementById('productModalTitle');
+            
+            form.reset();
+            document.getElementById('productId').value = '';
+            
+            if (product) {
+                title.textContent = 'แก้ไขสินค้า';
+                document.getElementById('productId').value = product.id;
+                document.getElementById('productName').value = product.name;
+                document.getElementById('productCategory').value = product.categoryId || '';
+                document.getElementById('productUnit').value = product.unit;
+                document.getElementById('productCost').value = product.cost;
+                document.getElementById('productPrice').value = product.price;
+                document.getElementById('productStock').value = product.stock || 0;
+                document.getElementById('productMinStock').value = product.minStock || 10;
+            } else {
+                title.textContent = 'เพิ่มสินค้า';
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.add('hidden');
+        }
+
+        function editProduct(id) {
+            const product = products.find(p => p.id === id);
+            if (product) openProductModal(product);
+        }
+
+        async function saveProduct(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('productId').value;
+            const data = {
+                name: document.getElementById('productName').value.trim(),
+                categoryId: document.getElementById('productCategory').value,
+                unit: document.getElementById('productUnit').value.trim(),
+                cost: parseFloat(document.getElementById('productCost').value) || 0,
+                price: parseFloat(document.getElementById('productPrice').value) || 0,
+                stock: parseInt(document.getElementById('productStock').value) || 0,
+                minStock: parseInt(document.getElementById('productMinStock').value) || 10,
+                updatedAt: new Date().toISOString()
+            };
+
+            try {
+                const { collection, doc, addDoc, updateDoc } = window.firebaseFunctions;
+                
+                if (id) {
+                    await updateDoc(doc(window.firebaseDb, 'products', id), data);
+                    showToast('แก้ไขสินค้าสำเร็จ');
+                } else {
+                    data.createdAt = new Date().toISOString();
+                    await addDoc(collection(window.firebaseDb, 'products'), data);
+                    showToast('เพิ่มสินค้าสำเร็จ');
+                }
+                
+                closeProductModal();
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        let deleteCallback = null;
+
+        function confirmDeleteProduct(id, name) {
+            document.getElementById('deleteMessage').textContent = `คุณต้องการลบสินค้า "${name}" หรือไม่?`;
+            deleteCallback = () => deleteProduct(id);
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        async function deleteProduct(id) {
+            try {
+                const { doc, deleteDoc } = window.firebaseFunctions;
+                await deleteDoc(doc(window.firebaseDb, 'products', id));
+                showToast('ลบสินค้าสำเร็จ');
+                closeDeleteModal();
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        // Category CRUD
+        function openCategoryModal(category = null) {
+            const modal = document.getElementById('categoryModal');
+            const form = document.getElementById('categoryForm');
+            const title = document.getElementById('categoryModalTitle');
+            
+            form.reset();
+            document.getElementById('categoryId').value = '';
+            
+            if (category) {
+                title.textContent = 'แก้ไขหมวดหมู่';
+                document.getElementById('categoryId').value = category.id;
+                document.getElementById('categoryName').value = category.name;
+                document.getElementById('categoryDesc').value = category.description || '';
+            } else {
+                title.textContent = 'เพิ่มหมวดหมู่';
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeCategoryModal() {
+            document.getElementById('categoryModal').classList.add('hidden');
+        }
+
+        function editCategory(id) {
+            const category = categories.find(c => c.id === id);
+            if (category) openCategoryModal(category);
+        }
+
+        async function saveCategory(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('categoryId').value;
+            const data = {
+                name: document.getElementById('categoryName').value.trim(),
+                description: document.getElementById('categoryDesc').value.trim(),
+                updatedAt: new Date().toISOString()
+            };
+
+            try {
+                const { collection, doc, addDoc, updateDoc } = window.firebaseFunctions;
+                
+                if (id) {
+                    await updateDoc(doc(window.firebaseDb, 'categories', id), data);
+                    showToast('แก้ไขหมวดหมู่สำเร็จ');
+                } else {
+                    data.createdAt = new Date().toISOString();
+                    await addDoc(collection(window.firebaseDb, 'categories'), data);
+                    showToast('เพิ่มหมวดหมู่สำเร็จ');
+                }
+                
+                closeCategoryModal();
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        function confirmDeleteCategory(id, name) {
+            document.getElementById('deleteMessage').textContent = `คุณต้องการลบหมวดหมู่ "${name}" หรือไม่?`;
+            deleteCallback = () => deleteCategory(id);
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        async function deleteCategory(id) {
+            try {
+                const { doc, deleteDoc } = window.firebaseFunctions;
+                await deleteDoc(doc(window.firebaseDb, 'categories', id));
+                showToast('ลบหมวดหมู่สำเร็จ');
+                closeDeleteModal();
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        // Supplier CRUD
+        function openSupplierModal(supplier = null) {
+            const modal = document.getElementById('supplierModal');
+            const form = document.getElementById('supplierForm');
+            const title = document.getElementById('supplierModalTitle');
+            
+            form.reset();
+            document.getElementById('supplierId').value = '';
+            
+            if (supplier) {
+                title.textContent = 'แก้ไขซัพพลายเออร์';
+                document.getElementById('supplierId').value = supplier.id;
+                document.getElementById('supplierName').value = supplier.name;
+                document.getElementById('supplierPhone').value = supplier.phone || '';
+                document.getElementById('supplierEmail').value = supplier.email || '';
+                document.getElementById('supplierAddress').value = supplier.address || '';
+            } else {
+                title.textContent = 'เพิ่มซัพพลายเออร์';
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeSupplierModal() {
+            document.getElementById('supplierModal').classList.add('hidden');
+        }
+
+        function editSupplier(id) {
+            const supplier = suppliers.find(s => s.id === id);
+            if (supplier) openSupplierModal(supplier);
+        }
+
+        async function saveSupplier(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('supplierId').value;
+            const data = {
+                name: document.getElementById('supplierName').value.trim(),
+                phone: document.getElementById('supplierPhone').value.trim(),
+                email: document.getElementById('supplierEmail').value.trim(),
+                address: document.getElementById('supplierAddress').value.trim(),
+                updatedAt: new Date().toISOString()
+            };
+
+            try {
+                const { collection, doc, addDoc, updateDoc } = window.firebaseFunctions;
+                
+                if (id) {
+                    await updateDoc(doc(window.firebaseDb, 'suppliers', id), data);
+                    showToast('แก้ไขซัพพลายเออร์สำเร็จ');
+                } else {
+                    data.createdAt = new Date().toISOString();
+                    await addDoc(collection(window.firebaseDb, 'suppliers'), data);
+                    showToast('เพิ่มซัพพลายเออร์สำเร็จ');
+                }
+                
+                closeSupplierModal();
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        function confirmDeleteSupplier(id, name) {
+            document.getElementById('deleteMessage').textContent = `คุณต้องการลบซัพพลายเออร์ "${name}" หรือไม่?`;
+            deleteCallback = () => deleteSupplier(id);
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        async function deleteSupplier(id) {
+            try {
+                const { doc, deleteDoc } = window.firebaseFunctions;
+                await deleteDoc(doc(window.firebaseDb, 'suppliers', id));
+                showToast('ลบซัพพลายเออร์สำเร็จ');
+                closeDeleteModal();
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        // Inbound Functions
+        function openInboundModal() {
+            const modal = document.getElementById('inboundModal');
+            document.getElementById('inboundForm').reset();
+            document.getElementById('inboundDate').value = new Date().toISOString().split('T')[0];
+            modal.classList.remove('hidden');
+        }
+
+        function closeInboundModal() {
+            document.getElementById('inboundModal').classList.add('hidden');
+        }
+
+        async function saveInbound(e) {
+            e.preventDefault();
+            
+            const productId = document.getElementById('inboundProduct').value;
+            const product = products.find(p => p.id === productId);
+            if (!product) {
+                showToast('กรุณาเลือกสินค้า', 'error');
+                return;
+            }
+
+            const quantity = parseInt(document.getElementById('inboundQty').value) || 0;
+            const supplierId = document.getElementById('inboundSupplier').value;
+            const supplier = suppliers.find(s => s.id === supplierId);
+            
+            const docNumber = 'IN-' + Date.now();
+            const data = {
+                docNumber,
+                productId,
+                productName: product.name,
+                quantity,
+                date: document.getElementById('inboundDate').value,
+                supplierId: supplierId || null,
+                supplierName: supplier?.name || null,
+                note: document.getElementById('inboundNote').value.trim(),
+                createdAt: new Date().toISOString(),
+                createdBy: currentUser.uid
+            };
+
+            try {
+                const { collection, doc, addDoc, updateDoc, writeBatch } = window.firebaseFunctions;
+                const batch = writeBatch(window.firebaseDb);
+                
+                // Add transaction
+                const transRef = doc(collection(window.firebaseDb, 'inbound_transactions'));
+                batch.set(transRef, data);
+                
+                // Update stock
+                const newStock = (product.stock || 0) + quantity;
+                const productRef = doc(window.firebaseDb, 'products', productId);
+                batch.update(productRef, { stock: newStock, updatedAt: new Date().toISOString() });
+                
+                // Add movement log
+                const movementRef = doc(collection(window.firebaseDb, 'stock_movements'));
+                batch.set(movementRef, {
+                    type: 'inbound',
+                    productId,
+                    productName: product.name,
+                    quantity,
+                    previousStock: product.stock || 0,
+                    newStock,
+                    docNumber,
+                    date: data.date,
+                    createdAt: new Date().toISOString()
+                });
+                
+                await batch.commit();
+                showToast('บันทึกรับสินค้าเข้าสำเร็จ');
+                closeInboundModal();
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        // Outbound Functions
+        function openOutboundModal() {
+            const modal = document.getElementById('outboundModal');
+            document.getElementById('outboundForm').reset();
+            document.getElementById('outboundDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('outboundStockInfo').textContent = '';
+            document.getElementById('outboundError').classList.add('hidden');
+            modal.classList.remove('hidden');
+        }
+
+        function closeOutboundModal() {
+            document.getElementById('outboundModal').classList.add('hidden');
+        }
+
+        function updateOutboundStockInfo() {
+            const productId = document.getElementById('outboundProduct').value;
+            const infoEl = document.getElementById('outboundStockInfo');
+            
+            if (!productId) {
+                infoEl.textContent = '';
+                return;
+            }
+            
+            const product = products.find(p => p.id === productId);
+            if (product) {
+                infoEl.textContent = `คงเหลือ: ${product.stock || 0} ${product.unit}`;
+            }
+        }
+
+        async function saveOutbound(e) {
+            e.preventDefault();
+            
+            const productId = document.getElementById('outboundProduct').value;
+            const product = products.find(p => p.id === productId);
+            const errorEl = document.getElementById('outboundError');
+            
+            if (!product) {
+                showToast('กรุณาเลือกสินค้า', 'error');
+                return;
+            }
+
+            const quantity = parseInt(document.getElementById('outboundQty').value) || 0;
+            const currentStock = product.stock || 0;
+            
+            // Check if stock would go negative
+            if (quantity > currentStock) {
+                errorEl.textContent = `สต็อกไม่เพียงพอ! คงเหลือเพียง ${currentStock} ${product.unit}`;
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            
+            errorEl.classList.add('hidden');
+            
+            const docNumber = 'OUT-' + Date.now();
+            const data = {
+                docNumber,
+                productId,
+                productName: product.name,
+                quantity,
+                date: document.getElementById('outboundDate').value,
+                note: document.getElementById('outboundNote').value.trim(),
+                createdAt: new Date().toISOString(),
+                createdBy: currentUser.uid
+            };
+
+            try {
+                const { collection, doc, writeBatch } = window.firebaseFunctions;
+                const batch = writeBatch(window.firebaseDb);
+                
+                // Add transaction
+                const transRef = doc(collection(window.firebaseDb, 'outbound_transactions'));
+                batch.set(transRef, data);
+                
+                // Update stock
+                const newStock = currentStock - quantity;
+                const productRef = doc(window.firebaseDb, 'products', productId);
+                batch.update(productRef, { stock: newStock, updatedAt: new Date().toISOString() });
+                
+                // Add movement log
+                const movementRef = doc(collection(window.firebaseDb, 'stock_movements'));
+                batch.set(movementRef, {
+                    type: 'outbound',
+                    productId,
+                    productName: product.name,
+                    quantity: -quantity,
+                    previousStock: currentStock,
+                    newStock,
+                    docNumber,
+                    date: data.date,
+                    createdAt: new Date().toISOString()
+                });
+                
+                await batch.commit();
+                showToast('บันทึกจ่ายสินค้าออกสำเร็จ');
+                closeOutboundModal();
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        // Report Functions
+        function setDefaultDates() {
+            const today = new Date();
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            document.getElementById('reportStartDate').value = startOfMonth.toISOString().split('T')[0];
+            document.getElementById('reportEndDate').value = today.toISOString().split('T')[0];
+        }
+
+        function generateReport() {
+            const type = document.getElementById('reportType').value;
+            const startDate = document.getElementById('reportStartDate').value;
+            const endDate = document.getElementById('reportEndDate').value;
+            
+            const thead = document.getElementById('reportTableHead');
+            const tbody = document.getElementById('reportTableBody');
+            const title = document.getElementById('reportTitle');
+            
+            if (type === 'movements') {
+                title.textContent = `รายงานรับเข้า-จ่ายออก (${formatDate(startDate)} - ${formatDate(endDate)})`;
+                thead.innerHTML = `
+                    <tr>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase">วันที่</th>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase">ประเภท</th>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase">เลขที่เอกสาร</th>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase">สินค้า</th>
+                        <th class="px-5 py-3 text-right text-xs font-medium text-slate-500 uppercase">จำนวน</th>
+                    </tr>
+                `;
+                
+                // Combine and sort movements
+                const allMovements = [
+                    ...inboundTransactions.filter(t => t.date >= startDate && t.date <= endDate).map(t => ({ ...t, type: 'inbound' })),
+                    ...outboundTransactions.filter(t => t.date >= startDate && t.date <= endDate).map(t => ({ ...t, type: 'outbound' }))
+                ].sort((a, b) => b.date.localeCompare(a.date));
+                
+                reportData = allMovements.map(m => ({
+                    'วันที่': formatDate(m.date),
+                    'ประเภท': m.type === 'inbound' ? 'รับเข้า' : 'จ่ายออก',
+                    'เลขที่เอกสาร': m.docNumber,
+                    'สินค้า': m.productName,
+                    'จำนวน': m.type === 'inbound' ? m.quantity : -m.quantity
+                }));
+                
+                if (allMovements.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="px-5 py-10 text-center text-slate-400">ไม่พบข้อมูลในช่วงวันที่ที่เลือก</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = allMovements.map(m => `
+                    <tr class="table-row">
+                        <td class="px-5 py-3 text-slate-600">${formatDate(m.date)}</td>
+                        <td class="px-5 py-3">
+                            <span class="px-2 py-1 text-xs font-medium rounded-full ${m.type === 'inbound' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}">
+                                ${m.type === 'inbound' ? 'รับเข้า' : 'จ่ายออก'}
+                            </span>
+                        </td>
+                        <td class="px-5 py-3 font-mono text-sm text-slate-600">${escapeHtml(m.docNumber)}</td>
+                        <td class="px-5 py-3 font-medium text-slate-800">${escapeHtml(m.productName)}</td>
+                        <td class="px-5 py-3 text-right font-medium ${m.type === 'inbound' ? 'text-green-600' : 'text-orange-600'}">
+                            ${m.type === 'inbound' ? '+' : '-'}${formatNumber(m.quantity)}
+                        </td>
+                    </tr>
+                `).join('');
+                
+            } else {
+                title.textContent = 'รายงานสินค้าคงเหลือ';
+                thead.innerHTML = `
+                    <tr>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase">สินค้า</th>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase">หมวดหมู่</th>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase">หน่วย</th>
+                        <th class="px-5 py-3 text-right text-xs font-medium text-slate-500 uppercase">คงเหลือ</th>
+                        <th class="px-5 py-3 text-right text-xs font-medium text-slate-500 uppercase">ราคาทุน</th>
+                    </tr>
+                `;
+                
+                reportData = products.map(p => ({
+                    'สินค้า': p.name,
+                    'หมวดหมู่': getCategoryName(p.categoryId),
+                    'หน่วย': p.unit,
+                    'คงเหลือ': p.stock || 0,
+                    'ราคาทุน': p.cost || 0
+                }));
+                
+                if (products.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-10 text-center text-slate-400">ไม่พบข้อมูลสินค้า</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = products.map(p => `
+                    <tr class="table-row">
+                        <td class="px-5 py-3 font-medium text-slate-800">${escapeHtml(p.name)}</td>
+                        <td class="px-5 py-3 text-slate-600">${getCategoryName(p.categoryId)}</td>
+                        <td class="px-5 py-3 text-slate-600">${escapeHtml(p.unit)}</td>
+                        <td class="px-5 py-3 text-right font-medium ${getStockStatus(p.stock, p.minStock).color}">${formatNumber(p.stock || 0)}</td>
+                        <td class="px-5 py-3 text-right text-slate-600">฿${formatNumber(p.cost || 0)}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        function exportToExcel() {
+            if (reportData.length === 0) {
+                showToast('กรุณาสร้างรายงานก่อน', 'error');
+                return;
+            }
+            
+            const ws = XLSX.utils.json_to_sheet(reportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Report');
+            
+            const type = document.getElementById('reportType').value;
+            const filename = type === 'movements' ? 'รายงานรับเข้า-จ่ายออก.xlsx' : 'รายงานสินค้าคงเหลือ.xlsx';
+            
+            XLSX.writeFile(wb, filename);
+            showToast('ส่งออก Excel สำเร็จ');
+        }
+
+        // Alert Modal
+        function showAlerts() {
+            const lowStock = products.filter(p => (p.stock || 0) <= (p.minStock || 10));
+            const content = document.getElementById('alertModalContent');
+            
+            if (lowStock.length === 0) {
+                content.innerHTML = '<p class="text-slate-500 text-center py-4">✓ ไม่มีการแจ้งเตือน</p>';
+            } else {
+                content.innerHTML = lowStock.map(p => {
+                    const isOut = (p.stock || 0) === 0;
+                    return `
+                        <div class="flex items-center justify-between p-4 rounded-lg mb-3 ${isOut ? 'bg-red-50 border border-red-200' : 'bg-amber-50 border border-amber-200'}">
+                            <div>
+                                <p class="font-medium text-slate-800">${escapeHtml(p.name)}</p>
+                                <p class="text-sm ${isOut ? 'text-red-600' : 'text-amber-600'}">
+                                    ${isOut ? '🔴 หมดสต็อก!' : '🟡 คงเหลือ ' + (p.stock || 0) + ' ' + p.unit + ' (ต่ำกว่า ' + (p.minStock || 10) + ')'}
+                                </p>
+                            </div>
+                            <button onclick="navigateToProduct('${p.id}')" class="px-3 py-1 text-sm bg-slate-800 text-white rounded-lg hover:bg-slate-700">
+                                ดูสินค้า
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            document.getElementById('alertModal').classList.remove('hidden');
+        }
+
+        function closeAlertModal() {
+            document.getElementById('alertModal').classList.add('hidden');
+        }
+
+        function navigateToProduct(id) {
+            closeAlertModal();
+            navigateTo('products');
+            setTimeout(() => editProduct(id), 300);
+        }
+
+        // Delete Modal
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+            deleteCallback = null;
+        }
+
+        // Utility Functions
+        function populateCategorySelect() {
+            const select = document.getElementById('productCategory');
+            select.innerHTML = '<option value="">-- เลือกหมวดหมู่ --</option>' +
+                categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+        }
+
+        function populateSupplierSelect() {
+            const select = document.getElementById('inboundSupplier');
+            select.innerHTML = '<option value="">-- เลือกซัพพลายเออร์ --</option>' +
+                suppliers.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+        }
+
+        function populateProductSelects() {
+            const inboundSelect = document.getElementById('inboundProduct');
+            const outboundSelect = document.getElementById('outboundProduct');
+            
+            const options = '<option value="">-- เลือกสินค้า --</option>' +
+                products.map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${p.stock || 0} ${p.unit})</option>`).join('');
+            
+            inboundSelect.innerHTML = options;
+            outboundSelect.innerHTML = options;
+        }
+
+        function getCategoryName(id) {
+            if (!id) return '-';
+            const cat = categories.find(c => c.id === id);
+            return cat ? cat.name : '-';
+        }
+
+        function getStockStatus(stock, minStock) {
+            stock = stock || 0;
+            minStock = minStock || 10;
+            
+            if (stock === 0) {
+                return { text: 'หมดสต็อก', badge: 'bg-red-100 text-red-700', color: 'text-red-600' };
+            } else if (stock <= minStock) {
+                return { text: 'ใกล้หมด', badge: 'bg-amber-100 text-amber-700', color: 'text-amber-600' };
+            }
+            return { text: 'ปกติ', badge: 'bg-green-100 text-green-700', color: 'text-slate-800' };
+        }
+
+        function formatNumber(num) {
+            return (num || 0).toLocaleString('th-TH');
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('th-TH', { 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+            });
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('th-TH');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            const msg = document.getElementById('toastMessage');
+            
+            icon.textContent = type === 'success' ? '✓' : '✕';
+            msg.textContent = message;
+            toast.querySelector('div').className = `${type === 'success' ? 'bg-slate-800' : 'bg-red-600'} text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-3`;
+            
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // Navigation
+        function navigateTo(page) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            
+            // Show selected page
+            document.getElementById(page + 'Page').classList.remove('hidden');
+            
+            // Update sidebar
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                link.classList.remove('active');
+                if (link.dataset.page === page) {
+                    link.classList.add('active');
+                }
+            });
+            
+            // Update title
+            const titles = {
+                dashboard: 'แดชบอร์ด',
+                products: 'จัดการสินค้า',
+                categories: 'หมวดหมู่',
+                suppliers: 'ซัพพลายเออร์',
+                inbound: 'รับสินค้าเข้า',
+                outbound: 'จ่ายสินค้าออก',
+                reports: 'รายงาน'
+            };
+            document.getElementById('pageTitle').textContent = titles[page] || 'แดชบอร์ด';
+            
+            // Close mobile sidebar
+            if (window.innerWidth < 1024) {
+                toggleSidebar(false);
+            }
+        }
+
+        function toggleSidebar(show) {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            if (show === undefined) {
+                show = sidebar.classList.contains('-translate-x-full');
+            }
+            
+            if (show) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        // Event Listeners
+        function setupEventListeners() {
+            // Login form
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            
+            // Forms
+            document.getElementById('productForm').addEventListener('submit', saveProduct);
+            document.getElementById('categoryForm').addEventListener('submit', saveCategory);
+            document.getElementById('supplierForm').addEventListener('submit', saveSupplier);
+            document.getElementById('inboundForm').addEventListener('submit', saveInbound);
+            document.getElementById('outboundForm').addEventListener('submit', saveOutbound);
+            
+            // Navigation
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    navigateTo(link.dataset.page);
+                });
+            });
+            
+            // Search
+            document.getElementById('productSearch').addEventListener('input', renderProducts);
+            
+            // Outbound product select
+            document.getElementById('outboundProduct').addEventListener('change', updateOutboundStockInfo);
+            
+            // Delete confirmation
+            document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
+                if (deleteCallback) deleteCallback();
+            });
+            
+            // Mobile sidebar
+            if (window.innerWidth < 1024) {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+            }
+            
+            window.addEventListener('resize', () => {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+                if (window.innerWidth >= 1024) {
+                    sidebar.classList.remove('-translate-x-full');
+                    overlay.classList.add('hidden');
+                }
+            });
+        }
+
+        // Initialize
+        initApp();
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9d69622e06354f5e',t:'MTc3MjU0ODY5Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
